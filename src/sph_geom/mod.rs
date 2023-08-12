@@ -153,6 +153,45 @@ impl Polygon {
 
   /// Returns `true` if an edge of the polygon intersects the great-circle arc defined by the
   /// two given points (we consider the arc having a length < PI).
+  pub fn intersect_great_circle(&self, n: &UnitVect3) -> Vec<UnitVect3> {
+    // Ensure a < b in longitude
+    let mut vertices = vec![];
+
+    let mut left = self.vertices.last().unwrap();
+    for (right, cross_prod) in self.vertices.iter().zip(self.cross_products.iter()) {
+      // Ensures pA < pB in longitude
+      let mut pa = left;
+      let mut pb = right;
+      if pa.lon() > pb.lon() {
+        std::mem::swap(&mut pa, &mut pb);
+      }
+
+      let i = cross_product(cross_prod, n).normalized();
+      // check if the intersection i belongs to the edge
+      let papb = dot_product(pa, pb);
+      if dot_product(pa, &i) > papb && dot_product(pb, &i) > papb {
+        vertices.push(i);
+      } else if dot_product(pa, &i.opposite()) > papb && dot_product(pb, &i.opposite()) > papb {
+        vertices.push(i.opposite());
+      } else {
+        let i = cross_product(cross_prod, n.opposite()).normalized();
+        // check if the intersection i belongs to the edge
+        let papb = dot_product(pa, pb);
+        if dot_product(pa, &i) > papb && dot_product(pb, &i) > papb {
+          vertices.push(i);
+        } else if dot_product(pa, &i.opposite()) > papb && dot_product(pb, &i.opposite()) > papb {
+          vertices.push(i.opposite());
+        }
+      }
+
+      left = right
+    }
+
+    vertices
+  }
+
+  /// Returns `true` if an edge of the polygon intersects the great-circle arc defined by the
+  /// two given points (we consider the arc having a length < PI).
   pub fn intersect_great_circle_arc(&self, a: &Coo3D, b: &Coo3D) -> Vec<UnitVect3> {
     // Ensure a < b in longitude
     let mut vertices = vec![];
